@@ -5,12 +5,30 @@ import yt_dlp
 import re
 import uuid
 from urllib.parse import urlparse
+import random
+import config
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()
 
 # Dictionary to store download status
 download_tasks = {}
+
+def get_random_proxy():
+    """Return a random proxy from the list, or None if proxy usage is disabled"""
+    if not config.USE_PROXY or not config.PROXY_LIST:
+        return None
+    return random.choice(config.PROXY_LIST)
+
+def apply_proxy_settings(ydl_opts):
+    """Apply proxy settings to a yt-dlp options dictionary if enabled"""
+    if config.USE_PROXY:
+        proxy = get_random_proxy()
+        if proxy:
+            ydl_opts['proxy'] = proxy
+            ydl_opts['socket_timeout'] = config.SOCKET_TIMEOUT
+            return proxy
+    return None
 
 def is_valid_url(url):
     try:
@@ -42,7 +60,10 @@ def get_platform(url):
 
 def get_available_formats(url):
     try:
-        with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
+        ydl_opts = {'quiet': True}
+        proxy = apply_proxy_settings(ydl_opts)
+        
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
             formats = []
             
@@ -121,8 +142,10 @@ def get_info():
             'ignoreerrors': True  # Don't immediately fail on errors
         }
         
+        proxy = apply_proxy_settings(ydl_opts)
+        
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            print(f"Attempting to extract info for: {url}")
+            print(f"Attempting to extract info for: {url}" + (f" using proxy: {proxy}" if proxy else ""))
             info = ydl.extract_info(url, download=False)
             
             if not info:
@@ -194,7 +217,7 @@ def get_info():
 @app.route('/api/download', methods=['POST'])
 def download_video():
     url = request.json.get('url', '')
-    format_id = request.json.get('format_id', 'bestvideo+bestaudio/best')
+    format_id = request.json.get('format_id', config.DEFAULT_FORMAT)
     title = request.json.get('title', '')
     
     if not url:
@@ -224,7 +247,7 @@ def download_video():
             'format': format_id,
             'outtmpl': output_path,
             'progress_hooks': [lambda d: update_progress(task_id, d)],
-            'merge_output_format': 'mp4',  # Ensure we merge video and audio
+            'merge_output_format': config.MERGE_OUTPUT_FORMAT,
             'postprocessor_args': ['-movflags', 'faststart'],  # Optimize for streaming
             'noplaylist': True,  # Only download the video, not playlists
             'quiet': False,
@@ -239,10 +262,17 @@ def download_video():
             'prefer_ffmpeg': True,
         }
         
+        # Apply proxy settings
+        proxy = apply_proxy_settings(ydl_opts)
+        if proxy:
+            print(f"Using proxy for download: {proxy}")
+        
         # Get video info if no title was provided
         if not title:
             try:
-                with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
+                info_opts = {'quiet': True}
+                apply_proxy_settings(info_opts)
+                with yt_dlp.YoutubeDL(info_opts) as ydl:
                     info = ydl.extract_info(url, download=False)
                     if info and 'title' in info:
                         download_tasks[task_id]['title'] = info['title']

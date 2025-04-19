@@ -13,4 +13,5 @@ idna==3.6
 urllib3==2.1.0
 importlib-metadata==4.11.3
 zipp==3.7.0
+PySocks==1.7.1
 typing-extensions==4.1.1 
