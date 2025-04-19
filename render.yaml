@@ -6,5 +6,5 @@ services:
     startCommand: gunicorn app:application
     envVars:
       - key: PYTHON_VERSION
-        value: 3.9.16
+        value: 3.12.7
     plan: free 
