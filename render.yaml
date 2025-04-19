@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: video-fetcher
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:application
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.16
+    plan: free 

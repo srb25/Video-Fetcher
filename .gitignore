@@ -99,4 +99,19 @@ downloads/
 .idea/
 .vscode/
 *.swp
-*.swo 
+*.swo
+
+# Virtual environment
+venv/
+env/
+ENV/
+
+# Local environment variables
+.env
+
+# Logs
+*.log
+
+# OS specific files
+.DS_Store
+Thumbs.db 
