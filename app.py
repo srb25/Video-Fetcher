@@ -477,4 +477,12 @@ if __name__ == '__main__':
         print("WARNING: FFmpeg is not available in PATH. Audio and video merging may not work correctly.")
         print("Please install FFmpeg to ensure videos have both audio and video streams.")
     
-    app.run(debug=True) 
+    # Configuration for production
+    # When running directly, use 0.0.0.0 to listen on all interfaces
+    # But never run with debug=True in production
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
+
+# For production WSGI servers (Gunicorn, uWSGI, etc.)
+# This allows the application to be imported
+application = app 
